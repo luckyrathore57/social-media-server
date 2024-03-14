@@ -1,0 +1,100 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum FriendRequestStatus {
+  IGNORED
+  PENDING
+  ACCEPTED
+}
+
+enum PublishedStatus {
+  PUBLIC
+  PRIVATE
+  FRIENDSONLY
+}
+
+model User {
+  id                     String          @id @default(uuid())
+  username               String          @unique
+  email                  String          @unique
+  password               String
+  collegeName            College         @relation("student", fields: [collegeId], references: [id])
+  collegeId              String
+  clubs                  Club[]          @relation("member")
+  ownPosts               Post[]          @relation("authorPost")
+  friends                User[]          @relation("friends")
+  friendsOf              User[]          @relation("friends")
+  friendRequestsSent     FriendRequest[] @relation("friendRequestSender")
+  friendRequestsReceived FriendRequest[] @relation("friendRequestReceiver")
+  likedPost              Post[]          @relation("likePost")
+  comments               Comment[]       @relation("commentOwner")
+  hostel                 Hostel?         @relation("residents", fields: [hostelId], references: [id])
+  hostelId               String?
+}
+
+model Post {
+  id          String          @id @default(uuid())
+  title       String
+  description String?
+  images      String[]
+  likedBY     User[]          @relation("likePost")
+  comments    Comment[]       @relation("commentPost")
+  published   PublishedStatus @default(PUBLIC)
+  author      User            @relation("authorPost", fields: [authorId], references: [id])
+  authorId    String
+  createdAt   DateTime        @default(now())
+}
+
+model FriendRequest {
+  id         String              @id @default(uuid())
+  sender     User                @relation("friendRequestSender", fields: [senderId], references: [id])
+  senderId   String
+  receiver   User                @relation("friendRequestReceiver", fields: [receiverId], references: [id])
+  receiverId String
+  status     FriendRequestStatus @default(PENDING)
+}
+
+model Comment {
+  id             String @id @default(uuid())
+  commentContent String
+  commentOwner   User   @relation("commentOwner", fields: [commentOwnerId], references: [id])
+  commentOwnerId String
+  post           Post   @relation("commentPost", fields: [postId], references: [id])
+  postId         String
+}
+
+model College {
+  id          String   @id @default(uuid())
+  collegeName String   @unique
+  students    User[]   @relation("student")
+  clubs       Club[]   @relation("collegeClub")
+  hostel      Hostel[] @relation("collegeHostel")
+}
+
+model Club {
+  id            String  @id @default(uuid())
+  clubName      String
+  members       User[]  @relation("member")
+  parentCollege College @relation("collegeClub", fields: [collegeId], references: [id])
+  collegeId     String
+}
+
+model Hostel {
+  id            String  @id @default(uuid())
+  hostelName    String
+  residents     User[]  @relation("residents")
+  parentCollege College @relation("collegeHostel", fields: [collegeId], references: [id])
+  collegeId     String
+}
